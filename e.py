@@ -33,9 +33,6 @@ btn3.grid(row=0, column=2, sticky=tk.W+tk.E)
 btn4 = tk.Button(buttonframe, text="4", font=('Arial', 18))
 btn4.grid(row=1, column=0, sticky=tk.W+tk.E)
 
-btn5 = tk.Button(buttonframe, text="5", font=('Arial', 18))
-btn5.grid(row=1, column=1, sticky=tk.W+tk.E)
-
 buttonframe.pack(fill='x')
 
 anotherbtn = tk.Button(root, text="TEST")
