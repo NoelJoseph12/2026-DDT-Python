@@ -10,3 +10,5 @@ class MyGUI:
 
 
         self.root.mainloop()
+
+__annotations__ = {"noel": str}
