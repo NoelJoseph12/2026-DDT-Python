@@ -15,4 +15,3 @@ subtitle_label = tk.Label(root, text="Measure The Mayhem", font=('Arial', 22, 'b
 subtitle_label.pack(padx=10, pady=10) #Creates a 10 pixel padding horizontally and vertically around the subtitle label.
 
 root.mainloop() #Starts the tkinter's event loop, which keeps the window open while waiting for user interaction.
-change 1
