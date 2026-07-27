@@ -1,5 +1,6 @@
 import tkinter as tk #Imports the tkinter library into my program and uses a short form of 'tk' for ease.
 
+from PIL import Image, ImageTk
 from tkinter import * #From the tkinter library import *(Everything).
 
 root = tk.Tk() #Creates a main application window. Tk() is the window that contains all the buttons, text boxes etc.
@@ -7,6 +8,15 @@ root.geometry("500x600") #Sets the size of the window to 500 pixels wide and 600
 root.title("Khaos - Workout Tracker") #Creates a title for the window application called "Khaos - Workout Tracker".
 
 root.configure(bg="black") #Changes the background color of the window application to black.
+
+img = Image.open("Khaos_Logo.png") #Opens the image file "Khaos_Logo.png" using the PIL library.
+img = img.resize((200, 200)) #Resizes the image to 200 pixels wide and 200 pixels tall.
+logo = ImageTk.PhotoImage(img)
+
+logo_label = tk.Label(root, image=logo, bg="black") #Creates a label widget to display the logo image in the window application.
+logo_label.pack(pady=20) #Creates a 20 pixel padding vertically around the logo
+logo_label.image = logo
+
 
 title_label = tk.Label(root, text="Khaos", font=('Arial', 28, 'bold'), bg="black", fg="white") #Creates a title label called 'Khaos', while allowing me to edit it to have preferred font, size, colour and weight.
 title_label.pack(padx=20, pady=20) #Creates a 20 pixel padding horizontally and vertically around the title label.
