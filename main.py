@@ -28,7 +28,8 @@ def create_database(): #Defines a function called create_database() that creates
 
     conn.commit() #Saves the changes made to the database.
     conn.close() #Closes the connection to the database.
-    create_database() #Calls the function when the program starts.
+
+create_database() #Calls the function when the program starts.
 
 
 
@@ -54,7 +55,17 @@ my_workout_exercises = [] #Creates an empty list that will store all the exercis
 
 # EXERCISE DATA #
 
-my_workout_exercises = [] #Creates an empty list that will store all the exercises the user adds for their personal workout.
+EXERCISE_IMAGE_FOLDER = Path(__file__).parent / "exercise_images"
+
+def load_exercise_image(filename, size=(150, 150)):
+    if not filename:
+        return None
+    try:
+        img = Image.open(EXERCISE_IMAGE_FOLDER / filename)
+        img = img.resize(size)
+        return ImageTk.PhotoImage(img)
+    except Exception:
+        return None
 
 EXERCISE_DATA = [
     {"name": "Barbell Bench Press", "description": "Lower the bar towards your chest, then press it upwards.", "category": "Chest", "image": ""},
@@ -211,6 +222,7 @@ def show_my_workout(): #Defines the function 'show_my_workout' which displays th
         return #Stops the rest of this function from running.
 
     clear_content() #Removes the content from the previous page.
+    subtitle_label.config(text="My Workout")
 
     title = tk.Label( #Creates the 'My Workout' heading.
         content_frame, #Places the heading inside the content area.
@@ -252,7 +264,7 @@ def show_my_workout(): #Defines the function 'show_my_workout' which displays th
     for exercise in my_workout_exercises: #Loops through every saved exercise.
         row = tk.Frame( #Creates a separate row for the current exercise.
             list_frame, #Places the row inside the exercise list.
-            bg="grey" #Gives the row a grey background.
+            bg="#202020" #Gives the row a grey background.
         )
 
         row.pack( #Displays the exercise row.
@@ -262,7 +274,7 @@ def show_my_workout(): #Defines the function 'show_my_workout' which displays th
 
         info = tk.Frame( #Creates a frame for the exercise information.
             row, #Places the information inside the exercise row.
-            bg="#grey" #Gives it the same background colour as the row.
+            bg="#202020" #Gives it the same background colour as the row.
         )
 
         info.pack( #Displays the exercise-information frame.
@@ -277,7 +289,7 @@ def show_my_workout(): #Defines the function 'show_my_workout' which displays th
             info, #Places the label inside the information frame.
             text=exercise["name"], #Gets the exercise name from its dictionary.
             font=("Arial", 12, "bold"), #Makes the exercise name bold.
-            bg="#grey", #Gives the label a dark-grey background.
+            bg="#202020", #Gives the label a dark grey background.
             fg="white", #Makes the exercise name white.
             anchor="w" #Positions the text on the left side of the label.
         ).pack(fill="x") #Displays the label across the available width.
@@ -286,8 +298,8 @@ def show_my_workout(): #Defines the function 'show_my_workout' which displays th
             info, #Places the label inside the information frame.
             text=exercise["category"], #Gets the category from the exercise dictionary.
             font=("Arial", 10), #Sets the category's font to arial and size 10.
-            bg="#grey", #Gives the label a grey background.
-            fg="light grey", #Makes the category text light grey.
+            bg="#202020", #Gives the label a grey background.
+            fg="#a9a9a9", #Makes the category text light grey.
             anchor="w" #Positions the text on the left side of the label.
         ).pack(fill="x") #Displays the label across the available width.
 
@@ -295,7 +307,7 @@ def show_my_workout(): #Defines the function 'show_my_workout' which displays th
             row, #Places the button inside the exercise row.
             text="Remove", #Sets the text displayed on the button.
             font=("Arial", 10, "bold"), #Makes the button text font arial, size 10 and bold.
-            bg="#grey", #Gives the button a grey background.
+            bg="#202020", #Gives the button a grey background.
             fg="white", #Makes the button text white.
             activebackground="white", #Changes the button background to white while it is being clicked.
             activeforeground="black", #Changes the button text to black while it is being clicked.
@@ -449,6 +461,21 @@ def show_exercise_library():
             bg="black", fg="white", anchor="w"
         ).grid(row=0, column=1, sticky="w", padx=(15, 0))
 
+        photo = load_exercise_image(exercise.get("image"))
+
+        if photo:
+            image_label = tk.Label(card, image=photo, bg="black")
+            image_label.image = photo
+            image_label.grid(row=1, column=0, pady=(6, 0))
+        else:
+            image_box = tk.Canvas(
+                card, width=150, height=150, bg="#c9c9c9", highlightthickness=0
+            )
+            image_box.grid(row=1, column=0, pady=(6, 0))
+            image_box.create_rectangle(1, 1, 149, 149, outline="#8a8a8a")
+            image_box.create_line(1, 1, 149, 149, fill="#8a8a8a", dash=(3, 2))
+            image_box.create_line(1, 149, 149, 1, fill="#8a8a8a", dash=(3, 2))
+
         button_frame = tk.Frame(card, bg="black")
         button_frame.grid(row=1, column=1, sticky="n", padx=(15, 0), pady=(20, 0))
 
@@ -506,154 +533,153 @@ def show_exercise_library():
     render_cards()
 
 
+# ==========================================================
+# LOGIN PAGE
+# ==========================================================
 
-# LOGIN PAGE #
+def show_login():  # Defines the function that displays the login page.
+    clear_content()  # Removes the content from the previous page.
+    subtitle_label.config(text="Log In / Sign Up")  # Changes the header subtitle.
 
-def show_login(): 
-    clear_content() 
-    subtitle_label.config(text="Log In / Sign Up") 
+    login_frame = tk.Frame(content_frame, bg="black")  # Creates a frame for the login form.
+    login_frame.pack(fill="both", expand=True)  # Makes the login frame fill the content area.
 
-    login_frame = tk.Frame(content_frame, bg="black")
-    login_frame.pack(fill="both", expand=True) 
-
-    no_account_label = tk.Label( 
-        login_frame, 
-        text="No account?", 
-        font=("Arial", 13, "bold"),
-        bg="black",  
-        fg="white"
+    no_account_label = tk.Label(  # Creates the "No account?" message.
+        login_frame,  # Places the message inside the login frame.
+        text="No account?",  # Sets the message text.
+        font=("Arial", 11),  # Sets the message font.
+        bg="black",  # Gives the message a black background.
+        fg="white"  # Makes the message text white.
     )
 
-    no_account_label.pack(pady=(15, 0)) 
+    no_account_label.pack(pady=(15, 0))  # Displays the message above the registration link.
 
-    register_link = tk.Label(
-        login_frame,
-        text="Register here",
-        font=("Arial", 12, "bold"),
-        bg="black", 
-        fg="white",
-        cursor="hand2"
+    register_link = tk.Label(  # Creates the clickable registration link.
+        login_frame,  # Places the link inside the login frame.
+        text="Register here",  # Sets the link text.
+        font=("Arial", 11, "underline"),  # Underlines the text so it looks like a link.
+        bg="black",  # Gives the link a black background.
+        fg="white",  # Makes the link text white.
+        cursor="hand2"  # Changes the mouse pointer when it moves over the link.
     )
 
-    register_link.pack(pady=(0, 10)) 
-    register_link.bind("<Button-1>", lambda event: show_register())
+    register_link.pack(pady=(0, 10))  # Displays the registration link.
+    register_link.bind("<Button-1>", lambda event: show_register())  # Opens the registration page when clicked.
 
-    username_label = tk.Label( 
-        login_frame, 
-        text="Username:",
-        font=("Arial", 15, "bold"),
-        bg="black", 
-        fg="white" 
+    username_label = tk.Label(  # Creates the username label.
+        login_frame,  # Places the label inside the login frame.
+        text="Username:",  # Sets the label text.
+        font=("Arial", 12),  # Sets the label font.
+        bg="black",  # Gives the label a black background.
+        fg="white"  # Makes the label text white.
     )
 
-    username_label.pack(pady=(20, 5))
+    username_label.pack(pady=(20, 5))  # Displays the username label.
 
-    global username_entry 
+    global username_entry  # Allows the login function to access the username entry.
 
-    username_entry = tk.Entry( 
-        login_frame,  
-        font=("Arial", 15, "bold"),
-        width=25 
+    username_entry = tk.Entry(  # Creates the username input box.
+        login_frame,  # Places the input box inside the login frame.
+        font=("Arial", 12),  # Sets the text font.
+        width=25  # Sets the width of the input box.
     )
 
-    username_entry.pack(pady=5)
+    username_entry.pack(pady=5)  # Displays the username input box.
 
-    password_label = tk.Label(
-        login_frame,
-        text="Password:",
-        font=("Arial", 15, "bold"),
-        bg="black", 
-        fg="white"
+    password_label = tk.Label(  # Creates the password label.
+        login_frame,  # Places the label inside the login frame.
+        text="Password:",  # Sets the label text.
+        font=("Arial", 12),  # Sets the label font.
+        bg="black",  # Gives the label a black background.
+        fg="white"  # Makes the label text white.
     )
 
-    password_label.pack(pady=(20, 5))
+    password_label.pack(pady=(10, 5))  # Displays the password label.
 
-    global password_entry 
+    global password_entry  # Allows the login function to access the password entry.
 
-    password_entry = tk.Entry( 
-        login_frame,
-        font=("Arial", 12),
-        width=25,
+    password_entry = tk.Entry(  # Creates the password input box.
+        login_frame,  # Places the input box inside the login frame.
+        font=("Arial", 12),  # Sets the text font.
+        width=25,  # Sets the width of the input box.
+        show="*"  # Replaces the typed password with asterisks.
     )
 
-    password_entry.pack(pady=5)
+    password_entry.pack(pady=5)  # Displays the password input box.
 
-    global message_label
+    global message_label  # Allows the login function to update the message label.
 
-    message_label = tk.Label(
-        login_frame,
-        text="",
-        font=("Arial", 11), 
-        bg="black", 
-        fg="white"
+    message_label = tk.Label(  # Creates a label for login messages.
+        login_frame,  # Places the message inside the login frame.
+        text="",  # Starts with no message.
+        font=("Arial", 11),  # Sets the message font.
+        bg="black",  # Gives the message a black background.
+        fg="white"  # Makes the starting text white.
     )
 
-    message_label.pack(pady=10)
+    message_label.pack(pady=10)  # Displays the message area.
 
-    submit_button = tk.Button(
-        login_frame,
-        text="Log In",
-        font=("Arial", 11, "bold"),
-        bg="#202020",
-        fg="white",
-        activebackground="white",
-        activeforeground="black",
-        relief="flat",
-        bd=0,
-        highlightthickness=2,
-        highlightbackground="white",
-        highlightcolor="white",
-        cursor="hand2",
-        command=login
+    submit_button = tk.Button(  # Creates the login button.
+        login_frame,  # Places the button inside the login frame.
+        text="Log In",  # Sets the button text.
+        font=("Arial", 11, "bold"),  # Makes the button text bold.
+        bg="#202020",  # Gives the button a dark-grey background.
+        fg="white",  # Makes the button text white.
+        activebackground="white",  # Makes the button white while clicked.
+        activeforeground="black",  # Makes the text black while clicked.
+        relief="flat",  # Removes the raised button border.
+        bd=0,  # Removes the standard border.
+        highlightthickness=2,  # Sets the thickness of the highlight border.
+        highlightbackground="white",  # Makes the highlight border white.
+        highlightcolor="white",  # Keeps the highlight border white when selected.
+        cursor="hand2",  # Changes the mouse pointer over the button.
+        command=login  # Calls the login function when clicked.
     )
 
-    submit_button.pack(pady=10)
+    submit_button.pack(pady=10)  # Displays the login button.
 
 
+# ==========================================================
+# LOGIN FUNCTION
+# ==========================================================
 
-# LOGIN FUNCTION #
+def login():  # Defines the function that checks the user's login details.
+    global logged_in  # Allows this function to change the login status.
+    global current_user  # Allows this function to store the current username.
 
-def login():
-    global logged_in 
-    global current_user
+    username = username_entry.get().strip()  # Gets the username and removes unwanted spaces.
+    password = password_entry.get()  # Gets the password entered by the user.
 
-    username = username_entry.get().strip() 
-    password = password_entry.get() 
-
-    if not username or not password: 
-        message_label.config( 
-            text="Please enter a username and password.",
-            fg="red" 
+    if not username or not password:  # Checks whether either input box is empty.
+        message_label.config(  # Updates the login message.
+            text="Please enter a username and password.",  # Explains that both fields are required.
+            fg="red"  # Makes the error message red.
         )
 
-        return  
+        return  # Stops the login attempt.
 
-    conn = sqlite3.connect("khaos.db")
-    cursor = conn.cursor() 
+    conn = sqlite3.connect("khaos.db")  # Opens the user database.
+    cursor = conn.cursor()  # Creates a cursor for running SQL commands.
 
-    cursor.execute(  
-        "SELECT * FROM users WHERE username=? AND password=?",  
-        (username, password) 
+    cursor.execute(  # Searches the database for matching login details.
+        "SELECT * FROM users WHERE username=? AND password=?",  # Uses placeholders to search safely.
+        (username, password)  # Supplies the username and password to the placeholders.
     )
 
-    result = cursor.fetchone()
-    conn.close() 
+    result = cursor.fetchone()  # Gets the first matching user from the database.
+    conn.close()  # Closes the database connection.
 
-    if result:
-        logged_in = True
-        current_user = username  
-        show_logged_in_navigation()
-        show_main_menu() 
+    if result:  # Checks whether a matching account was found.
+        logged_in = True  # Changes the login status to logged in.
+        current_user = username  # Stores the logged-in user's username.
+        show_logged_in_navigation()  # Displays the navigation buttons for logged-in users.
+        show_main_menu()  # Returns the user to the main menu.
 
-    else: 
-        message_label.config( 
-            text="Invalid username or password.", 
-            fg="red"
+    else:  # Runs when the username and password do not match an account.
+        message_label.config(  # Updates the login message.
+            text="Invalid username or password.",  # Explains that the login details were incorrect.
+            fg="red"  # Makes the error message red.
         )
-
-
-
-# REGISTER FUNCTION #
 
 def register():
     username = register_username_entry.get().strip()
@@ -695,8 +721,9 @@ def register():
         conn.close()
 
 
-
-# REGISTER PAGE #
+# ==========================================================
+# REGISTER PAGE
+# ==========================================================
 
 def show_register():
     clear_content()
@@ -718,7 +745,7 @@ def show_register():
     register_username_label = tk.Label(
         register_frame,
         text="Username:",
-        font=("Arial", 15, "bold"),
+        font=("Arial", 12),
         bg="black",
         fg="white"
     )
@@ -729,7 +756,7 @@ def show_register():
 
     register_username_entry = tk.Entry(
         register_frame,
-        font=("Arial", 15, "bold"),
+        font=("Arial", 12),
         width=25
     )
 
@@ -738,7 +765,7 @@ def show_register():
     register_password_label = tk.Label(
         register_frame,
         text="Password:",
-        font=("Arial", 15, "bold"),
+        font=("Arial", 12),
         bg="black",
         fg="white"
     )
@@ -749,8 +776,9 @@ def show_register():
 
     register_password_entry = tk.Entry(
         register_frame,
-        font=("Arial", 15, "bold"),
+        font=("Arial", 12),
         width=25,
+        show="*"
     )
 
     register_password_entry.pack(pady=5)
@@ -803,8 +831,9 @@ def show_register():
     back_to_login_button.pack(pady=5)
 
 
-
-# LOGGED OUT NAVIGATION #
+# ==========================================================
+# LOGGED-OUT NAVIGATION
+# ==========================================================
 
 def show_logged_out_navigation():
     for widget in navigation_frame.winfo_children():
@@ -863,8 +892,9 @@ def show_logged_out_navigation():
     )
 
 
-
-# LOGGED IN NAVIGATION #
+# ==========================================================
+# LOGGED-IN NAVIGATION
+# ==========================================================
 
 def show_logged_in_navigation():
     for widget in navigation_frame.winfo_children():
