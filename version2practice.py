@@ -48,6 +48,62 @@ root.configure(bg="black")  # Changes the main window background to black.
 
 logged_in = False  # Records whether a user is currently logged in.
 current_user = None  # Stores the username of the logged-in user.
+my_workout_exercises = []
+
+
+# ==========================================================
+# EXERCISE DATA
+# ==========================================================
+
+EXERCISE_IMAGE_FOLDER = Path(__file__).parent / "exercise_images"
+
+def load_exercise_image(filename, size=(150, 150)):
+    if not filename:
+        return None
+    try:
+        img = Image.open(EXERCISE_IMAGE_FOLDER / filename)
+        img = img.resize(size)
+        return ImageTk.PhotoImage(img)
+    except Exception:
+        return None
+
+EXERCISE_DATA = [
+    {"name": "Barbell Bench Press", "description": "Lower the bar towards your chest, then press it upwards.", "category": "Chest", "image": ""},
+    {"name": "Incline Dumbbell Press", "description": "Press dumbbells upwards while lying on an inclined bench.", "category": "Chest", "image": ""},
+    {"name": "Machine Chest Fly", "description": "Bring the handles together in front of your chest.", "category": "Chest", "image": ""},
+    {"name": "Dips", "description": "Holding onto two parallel bars, lowering your body by bending your arms, and then pushing yourself back up", "category": "Chest", "image": ""},
+
+    {"name": "Dumbbell Shoulder Press", "description": "Press dumbbells upwards from shoulder height.", "category": "Shoulders", "image": ""},
+    {"name": "Dumbbell Lateral Raises", "description": "Raise dumbbells out to your sides until they reach shoulder height.", "category": "Shoulders", "image": ""},
+    {"name": "Dumbbell Raises", "description": "Lift dumbbells directly in front of your body.", "category": "Shoulders", "image": ""},
+    {"name": "Rear Delt Fly", "description": "Bend forward and raise dumbbells out to your sides.", "category": "Shoulders", "image": ""},
+    
+    {"name": "Preacher Curls", "description": "Curl a weight while resting your upper arms on a preacher bench.", "category": "Biceps", "image": ""},
+    {"name": "Incline Dumbbell Curls", "description": "Curl dumbbells while sitting back on an inclined bench.", "category": "Biceps", "image": ""},
+    {"name": "Hammer Curls", "description": "Curl dumbbells with your palms facing towards each other.", "category": "Biceps", "image": ""},
+    {"name": "Barbell Curls", "description": "Curl a barbell towards your chest without moving your elbows.", "category": "Biceps", "image": ""},
+    
+    {"name": "Overhead Tricep Extensions", "description": "Lower a weight behind your head, then extend your arms upwards.", "category": "Triceps", "image": ""},
+    {"name": "Skull Crushers", "description": "Lower a barbell towards your forehead, then press it upwards.", "category": "Triceps", "image": ""},
+    {"name": "Dumbbell Extensions", "description": "Extend dumbbells overhead with straight arms.", "category": "Triceps", "image": ""},
+    {"name": "Cable Tricep Pushdown", "description": "Push a cable down towards your thighs.", "category": "Triceps", "image": ""},
+    
+    {"name": "Lat Pulldowns", "description": "Pull a cable bar down towards your upper chest.", "category": "Back", "image": ""},
+    {"name": "Seated Cable Rows", "description": "Pull a cable towards your torso while seated.", "category": "Back", "image": ""},
+    {"name": "T-Bar Rows", "description": "Pull a T-bar weight towards your torso.", "category": "Back", "image": ""},
+    {"name": "Deadlifts", "description": "Lift a barbell from the ground to hip level.", "category": "Back", "image": ""},
+    
+    {"name": "Squats", "description": "Stand with feet shoulder-width apart and lower your body by bending your knees and hips.", "category": "Legs", "image": ""},
+    {"name": "Romanian Deadlifts", "description": "Lift a barbell from the ground to hip level with a slight bend in your knees.", "category": "Legs", "image": ""},
+    {"name": "Calf Raises", "description": "Raise your heels off the ground while standing on your toes.", "category": "Legs", "image": ""},
+    {"name": "Leg Extensions", "description": "Extend your legs straight out in front of you while seated.", "category": "Legs", "image": ""},
+    {"name": "Leg Press", "description": "Push a weight away from your body while seated.", "category": "Legs", "image": ""},
+    {"name": "Leg Curls", "description": " Curl your legs under your body while seated.", "category": "Legs", "image": ""},
+    
+    {"name": "Machine Abdominal Crunches", "description": "Perform crunches using a machine designed for abdominal exercises.", "category": "Core", "image": ""},
+    {"name": "Planks", "description": "Hold a position similar to a push-up, but rest on your forearms.", "category": "Core", "image": ""},
+    {"name": "Russian Twists", "description": "Sit on the floor and twist your torso from side to side.", "category": "Core", "image": ""},     
+]
 
 
 # ==========================================================
@@ -112,6 +168,21 @@ subtitle_label = tk.Label(  # Creates the subtitle below the main title.
 
 subtitle_label.pack()  # Displays the subtitle.
 
+# ==========================================================
+# DIVIDER
+# ==========================================================
+
+divider = tk.Frame(root, bg="white", height=5)  # Creates a white divider above the navigation bar.
+divider.pack(fill="x", padx=8, pady=(0, 8))  # Displays the divider across the window.
+
+
+# ==========================================================
+# NAVIGATION FRAME
+# ==========================================================
+
+navigation_frame = tk.Frame(root, bg="black", height=60)  # Creates the navigation bar.
+navigation_frame.pack(fill="x", padx=5, pady=5)  # Places the navigation bar across the window.
+
 
 # ==========================================================
 # CONTENT AREA
@@ -151,7 +222,7 @@ def show_main_menu():  # Defines the function that displays the main menu.
 
     message = tk.Label(  # Creates an instruction message.
         content_frame,  # Places the message inside the content area.
-        text="Choose an option from the navigation bar.",  # Tells the user what to do.
+        text="Your Personal Workout Tracker\nChoose an option from the navigation bar.",  # Tells the user what to do.
         font=("Arial", 12),  # Sets the message font.
         bg="black",  # Gives the message a black background.
         fg="white"  # Makes the message text white.
@@ -182,48 +253,258 @@ def show_my_workout():  # Defines the function that displays the My Workout page
 
     title.pack(pady=(25, 15))  # Displays the heading with space around it.
 
-    message = tk.Label(  # Creates a message for the My Workout page.
-        content_frame,  # Places the message inside the content area.
-        text="Your saved workouts will appear here.",  # Explains what will be shown on this page.
-        font=("Arial", 12),  # Sets the message font.
-        bg="black",  # Gives the message a black background.
-        fg="white"  # Makes the message text white.
-    )
+    if not my_workout_exercises:
+        message = tk.Label(  # Creates a message for the My Workout page.
+            content_frame,  # Places the message inside the content area.
+            text="Your saved workouts will appear here.",  # Explains what will be shown on this page.
+            font=("Arial", 12),  # Sets the message font.
+            bg="black",  # Gives the message a black background.
+            fg="white"  # Makes the message text white.
+        )
 
-    message.pack(pady=5)  # Displays the message.
+        message.pack(pady=5)  # Displays the message.
+        return
+
+    list_frame = tk.Frame(content_frame, bg="black")
+    list_frame.pack(fill="both", expand=True, padx=20)
+
+    def remove_exercise(exercise):
+        my_workout_exercises.remove(exercise)
+        show_my_workout()
+
+    for exercise in my_workout_exercises:
+        row = tk.Frame(list_frame, bg="#202020")
+        row.pack(fill="x", pady=6)
+
+        info = tk.Frame(row, bg="#202020")
+        info.pack(side="left", fill="x", expand=True, padx=12, pady=10)
+
+        tk.Label(
+            info, text=exercise["name"], font=("Arial", 12, "bold"),
+            bg="#202020", fg="white", anchor="w"
+        ).pack(fill="x")
+
+        tk.Label(
+            info, text=exercise["category"], font=("Arial", 10),
+            bg="#202020", fg="#a9a9a9", anchor="w"
+        ).pack(fill="x")
+
+        tk.Button(
+            row, text="Remove", font=("Arial", 10, "bold"),
+            bg="#7a7a7a", fg="white", activebackground="white", activeforeground="black",
+            relief="flat", bd=0, cursor="hand2",
+            command=lambda ex=exercise: remove_exercise(ex)
+        ).pack(side="right", padx=12, ipady=4)
 
 
 # ==========================================================
 # EXERCISE LIBRARY
 # ==========================================================
 
-def show_exercise_library():  # Defines the function that displays the Exercise Library.
-    if not logged_in:  # Checks whether the user is logged in.
-        show_login()  # Sends logged-out users to the login page.
-        return  # Stops the rest of this function from running.
+def show_exercise_library():
+    if not logged_in:
+        show_login()
+        return
 
-    clear_content()  # Removes the content from the previous page.
-    subtitle_label.config(text="Exercise Library")  # Changes the header subtitle.
+    clear_content()
+    subtitle_label.config(text="Exercise Library")
 
-    title = tk.Label(  # Creates the Exercise Library heading.
-        content_frame,  # Places the heading inside the content area.
-        text="Exercise Library",  # Sets the heading text.
-        font=("Arial", 22, "bold"),  # Makes the heading large and bold.
-        bg="black",  # Gives the heading a black background.
-        fg="white"  # Makes the heading text white.
+    title = tk.Label(
+        content_frame,
+        text="Exercise Library",
+        font=("Arial", 22, "bold"),
+        bg="black",
+        fg="white",
+        anchor="w"
     )
 
-    title.pack(pady=(25, 15))  # Displays the heading with space around it.
+    title.pack(pady=(15, 10), padx=20, fill="x")
 
-    message = tk.Label(  # Creates a message for the Exercise Library page.
-        content_frame,  # Places the message inside the content area.
-        text="Your exercise library will appear here.",  # Explains what will be shown on this page.
-        font=("Arial", 12),  # Sets the message font.
-        bg="black",  # Gives the message a black background.
-        fg="white"  # Makes the message text white.
+    search_placeholder = "Search Exercise"
+
+    search_box = tk.Frame(content_frame, bg="#a9a9a9")
+    search_box.pack(fill="x", padx=20, pady=(0, 15))
+
+    search_entry = tk.Entry(
+        search_box,
+        font=("Arial", 12),
+        bg="#a9a9a9",
+        fg="white",
+        insertbackground="white",
+        relief="flat",
+        bd=0
     )
 
-    message.pack(pady=5)  # Displays the message.
+    search_entry.pack(side="left", fill="x", expand=True, ipady=8, padx=(12, 0))
+    search_entry.insert(0, search_placeholder)
+
+    search_icon = tk.Label(
+        search_box,
+        text="\U0001F50D",
+        font=("Arial", 13),
+        bg="#a9a9a9",
+        fg="white"
+    )
+
+    search_icon.pack(side="right", padx=12)
+
+    def clear_placeholder(event):
+        if search_entry.get() == search_placeholder:
+            search_entry.delete(0, "end")
+
+    def restore_placeholder(event):
+        if search_entry.get() == "":
+            search_entry.insert(0, search_placeholder)
+
+    search_entry.bind("<FocusIn>", clear_placeholder)
+    search_entry.bind("<FocusOut>", restore_placeholder)
+
+    scroll_container = tk.Frame(content_frame, bg="black")
+    scroll_container.pack(fill="both", expand=True, padx=20, pady=(0, 15))
+
+    library_canvas = tk.Canvas(scroll_container, bg="black", highlightthickness=0)
+    scrollbar = tk.Scrollbar(scroll_container, orient="vertical", command=library_canvas.yview)
+    cards_frame = tk.Frame(library_canvas, bg="black")
+
+    cards_frame.bind(
+        "<Configure>",
+        lambda event: library_canvas.configure(scrollregion=library_canvas.bbox("all"))
+    )
+
+    library_canvas.create_window((0, 0), window=cards_frame, anchor="nw")
+    library_canvas.configure(yscrollcommand=scrollbar.set)
+
+    library_canvas.pack(side="left", fill="both", expand=True)
+    scrollbar.pack(side="right", fill="y")
+
+    def on_mousewheel(event):
+        library_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+    library_canvas.bind_all("<MouseWheel>", on_mousewheel)
+
+    def open_exercise_details(exercise):
+        detail_window = tk.Toplevel(root)
+        detail_window.title(exercise["name"])
+        detail_window.configure(bg="black")
+        detail_window.geometry("400x300")
+
+        tk.Label(
+            detail_window, text=exercise["name"], font=("Arial", 18, "bold"),
+            bg="black", fg="white"
+        ).pack(pady=(20, 5))
+
+        tk.Label(
+            detail_window, text=exercise["category"], font=("Arial", 12, "italic"),
+            bg="black", fg="#a9a9a9"
+        ).pack(pady=(0, 15))
+
+        tk.Label(
+            detail_window, text=exercise["description"], font=("Arial", 11),
+            bg="black", fg="white", wraplength=350, justify="left"
+        ).pack(padx=20)
+
+        tk.Button(
+            detail_window, text="Close", font=("Arial", 10, "bold"),
+            bg="#202020", fg="white", relief="flat", cursor="hand2",
+            command=detail_window.destroy
+        ).pack(pady=20)
+
+    def add_exercise_to_workout(exercise, add_button):
+        if exercise in my_workout_exercises:
+            add_button.config(text="Already Added")
+        else:
+            my_workout_exercises.append(exercise)
+            add_button.config(text="Added!")
+
+        def reset_button():
+            if add_button.winfo_exists():
+                add_button.config(text="Add Exercise")
+
+        content_frame.after(1200, reset_button)
+
+    def build_card(exercise):
+        card = tk.Frame(cards_frame, bg="black")
+
+        tk.Label(
+            card, text=exercise["name"], font=("Arial", 11, "bold"),
+            bg="black", fg="white", anchor="w"
+        ).grid(row=0, column=0, sticky="w")
+
+        tk.Label(
+            card, text=exercise["category"], font=("Arial", 11, "bold"),
+            bg="black", fg="white", anchor="w"
+        ).grid(row=0, column=1, sticky="w", padx=(15, 0))
+
+        photo = load_exercise_image(exercise.get("image"))
+
+        if photo:
+            image_label = tk.Label(card, image=photo, bg="black")
+            image_label.image = photo
+            image_label.grid(row=1, column=0, pady=(6, 0))
+        else:
+            image_box = tk.Canvas(
+                card, width=150, height=150, bg="#c9c9c9", highlightthickness=0
+            )
+            image_box.grid(row=1, column=0, pady=(6, 0))
+            image_box.create_rectangle(1, 1, 149, 149, outline="#8a8a8a")
+            image_box.create_line(1, 1, 149, 149, fill="#8a8a8a", dash=(3, 2))
+            image_box.create_line(1, 149, 149, 1, fill="#8a8a8a", dash=(3, 2))
+
+        button_frame = tk.Frame(card, bg="black")
+        button_frame.grid(row=1, column=1, sticky="n", padx=(15, 0), pady=(20, 0))
+
+        view_button = tk.Button(
+            button_frame, text="View Exercise", font=("Arial", 10, "bold"), width=15,
+            bg="#7a7a7a", fg="white", activebackground="white", activeforeground="black",
+            relief="flat", bd=0, cursor="hand2",
+            command=lambda: open_exercise_details(exercise)
+        )
+        view_button.pack(pady=(0, 10), ipady=6)
+
+        add_button = tk.Button(
+            button_frame, text="Add Exercise", font=("Arial", 10, "bold"), width=15,
+            bg="#7a7a7a", fg="white", activebackground="white", activeforeground="black",
+            relief="flat", bd=0, cursor="hand2"
+        )
+        add_button.config(command=lambda: add_exercise_to_workout(exercise, add_button))
+        add_button.pack(ipady=6)
+
+        return card
+
+    def render_cards():
+        for widget in cards_frame.winfo_children():
+            widget.destroy()
+
+        typed_text = search_entry.get().strip().lower()
+        if typed_text == search_placeholder.lower():
+            typed_text = ""
+
+        matches = [
+            exercise for exercise in EXERCISE_DATA
+            if typed_text in exercise["name"].lower()
+            or typed_text in exercise["category"].lower()
+        ]
+
+        columns = 3
+
+        if not matches:
+            tk.Label(
+                cards_frame, text="No exercises found.", font=("Arial", 12),
+                bg="black", fg="white"
+            ).grid(row=0, column=0, columnspan=columns, pady=30)
+            return
+
+        for index, exercise in enumerate(matches):
+            row = index // columns
+            col = index % columns
+            build_card(exercise).grid(row=row, column=col, padx=60, pady=20, sticky="n")
+
+    def on_search_change(event):
+        render_cards()
+
+    search_entry.bind("<KeyRelease>", on_search_change)
+
+    render_cards()
 
 
 # ==========================================================
@@ -531,14 +812,6 @@ def show_register():  # Defines the function that displays the registration page
 
 
 # ==========================================================
-# NAVIGATION FRAME
-# ==========================================================
-
-navigation_frame = tk.Frame(root, bg="black", height=60)  # Creates the navigation bar.
-navigation_frame.pack(fill="x", padx=5, pady=5)  # Places the navigation bar across the window.
-
-
-# ==========================================================
 # LOGGED-OUT NAVIGATION
 # ==========================================================
 
@@ -597,7 +870,6 @@ def show_logged_out_navigation():  # Defines the navigation shown to logged-out 
         pady=5,  # Adds vertical space around the button.
         ipady=12  # Adds space inside the button.
     )
-
 
 # ==========================================================
 # LOGGED-IN NAVIGATION
@@ -711,6 +983,12 @@ def show_logged_in_navigation():  # Defines the navigation shown to logged-in us
         ipady=10  # Adds space inside the button.
     )
 
+# ==========================================================
+# DIVIDER
+# ==========================================================
+
+divider = tk.Frame(root, bg="white", height=5)  # Creates a white divider above the navigation bar.
+divider.pack(fill="x", padx=8, pady=(0, 8))  # Displays the divider across the window.
 
 # ==========================================================
 # LOG OUT
@@ -724,14 +1002,6 @@ def logout():  # Defines the function that logs the user out.
     current_user = None  # Removes the stored username.
     show_logged_out_navigation()  # Displays the logged-out navigation buttons.
     show_main_menu()  # Returns the user to the main menu.
-
-
-# ==========================================================
-# DIVIDER
-# ==========================================================
-
-divider = tk.Frame(root, bg="white", height=5)  # Creates a white divider above the navigation bar.
-divider.pack(fill="x", padx=8, pady=(0, 8))  # Displays the divider across the window.
 
 
 # ==========================================================
