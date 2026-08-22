@@ -5,17 +5,58 @@ import sqlite3 #Imports the sqlite3 library, which allows me to create and manag
 
 
 
-# DATABASE # 
+# DATABASES # 
 
-def create_database(): #Defines a function called create_database() that creates a database called 'khaos.db' and a table called 'users' with two columns: 'username' and 'password'.
-    conn = sqlite3.connect('khaos.db') #Opens the database file 'khaos.db'. If the file does not exist, it will be create it.
-    cursor = conn.cursor() #Creates a cursor which allows me to execute SQL commands on the database.
+LOGIN_DATABASE_PATH = Path(__file__).parent / "khaoslogins.db" #LOGIN_DATABASE_PATH is a variable that stores the path file to the khaoslogins database. Stores usernames and passwords in a separate login database beside this Python file.
+EXERCISE_DATABASE_PATH = Path(__file__).parent / "khaosexercise.db" #EXERCISE_DATABASE_PATH is a variable that stores the path file to the khaosexercise database. Stores exercises and workout information of each user in a separate exercise database.
 
-    cursor.execute( #Runs an SQL command that creates a table called 'users' with two columns: 'username' and 'password'.
+def connect_login_database(): #Defines a function called connect_login_database that opens only the username and password database.
+    conn = sqlite3.connect(LOGIN_DATABASE_PATH) #Uses SQLite to open and create a connection to the database khaoslogins which is stored in LOGIN_DATABASE_PATH. It also creates the database if it doesn't exist.
+    return conn #Ends the function and returns the open connection so the program can continue to run along with using the login database.
+
+
+def connect_exercise_database(): #Defines a function called connect_exercise_database that opens only the exercise and workout database.
+    conn = sqlite3.connect(EXERCISE_DATABASE_PATH) #Uses SQLite to open and create a connection to the database khaosexercise which is stored in EXERCISE_DATABASE_PATH. It also creates the database if it doesn't exist.
+    conn.execute("PRAGMA foreign_keys = ON") #The variable conn executes a command to SQLite enabling a foreign key rule for this connection so invalid relationships between exercise records are prevented. Needed help for this.
+    return conn #Ends the function and returns the open connection so the program can continue to run along with using the exercise database.
+
+
+def create_databases(): #Defines a function called create_databases that creates the tables in both database files.
+    login_conn = connect_login_database() #Opens the database used only for account information.
+    login_cursor = login_conn.cursor() #Creates a cursor for setting up the users table.
+
+    login_cursor.execute( #Runs an SQL command that creates a table called 'users' with two columns: 'username' and 'password'.
         "CREATE TABLE IF NOT EXISTS users (" #Creates a table called 'users' if it doesn't already exist.
            "username TEXT PRIMARY KEY," #Creates a unique 'username' column is the primary key, which means that it must be unique for each user. 
               "password TEXT NOT NULL)" #The 'password' column is not null, which means that it cannot be empty.
                    )
+
+    login_conn.commit() #Saves the users table in khaoslogins.db.
+    login_conn.close() #Closes the login database connection.
+
+    exercise_conn = connect_exercise_database() #Opens the database used for exercises and workouts.
+    exercise_cursor = exercise_conn.cursor() #Creates a cursor for setting up the exercise tables.
+
+    exercise_cursor.execute( #Creates a table that stores every exercise from the Exercise Library.
+        "CREATE TABLE IF NOT EXISTS exercises ("
+        "exercise_id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "name TEXT UNIQUE NOT NULL,"
+        "description TEXT NOT NULL,"
+        "category TEXT NOT NULL,"
+        "image TEXT NOT NULL DEFAULT '')"
+    )
+
+    exercise_cursor.execute( #Creates a table that stores the exercises selected by each user and their workout values.
+        "CREATE TABLE IF NOT EXISTS user_workouts ("
+        "workout_id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "username TEXT NOT NULL,"
+        "exercise_id INTEGER NOT NULL,"
+        "sets INTEGER NOT NULL DEFAULT 0,"
+        "reps INTEGER NOT NULL DEFAULT 0,"
+        "weight REAL NOT NULL DEFAULT 0,"
+        "UNIQUE(username, exercise_id),"
+        "FOREIGN KEY(exercise_id) REFERENCES exercises(exercise_id) ON DELETE CASCADE)"
+    )
 
     #cursor.execute( # Runs an SQL command to add example accounts for testing.
         #"INSERT OR IGNORE INTO users (username, password) VALUES " # Adds users unless they already exist.
@@ -24,12 +65,12 @@ def create_database(): #Defines a function called create_database() that creates
         #"('user3', 'pass789')" # Adds the third example account.
     #)
 
-#Lines 20 to 25 are commented out because they were used for testing purposes and are no longer needed. The example accounts have been added to the database and do not need to be added again.
+#Lines 61 to 66 are commented out because they were used for testing purposes and are no longer needed. The example accounts have been added to the database and do not need to be added again.
 
-    conn.commit() #Saves the changes made to the database.
-    conn.close() #Closes the connection to the database.
+    exercise_conn.commit() #Saves the exercise tables in khaosexercise.db.
+    exercise_conn.close() #Closes the exercise database connection.
 
-create_database() #Calls the function when the program starts.
+create_databases() #Creates both databases and their tables when the program starts.
 
 
 
@@ -49,26 +90,29 @@ root.configure(bg="black") #Changes the main window's background color to black.
 # LOGIN STATUS #
 
 logged_in = False #Keeps track of whether a user is logged in or not. Initially set to False, indicating that no user is logged in when the application starts.
-current_user = None #Stores the username of the currently logged-in user. Initially set to None, indicating that no user is logged in when the application starts.
-my_workout_exercises = [] #Creates an empty list that will store all the exercises the user adds for their personal workout.
+current_user = None #Stores the username of the currently logged in user. Initially set to None, indicating that no user is logged in when the application starts.
 
 
 # EXERCISE DATA #
 
-EXERCISE_IMAGE_FOLDER = Path(__file__).parent / "exercise_images"
+EXERCISE_IMAGE_FOLDER = Path(__file__).parent / "Khaos Images" #Creates a path to the exercise_images folder located in the same folder as this Python file.
 
-def load_exercise_image(filename, size=(150, 150)):
-    if not filename:
-        return None
-    try:
-        img = Image.open(EXERCISE_IMAGE_FOLDER / filename)
-        img = img.resize(size)
-        return ImageTk.PhotoImage(img)
-    except Exception:
-        return None
+def load_exercise_image(filename, size=(150, 150)): #Defines a function that receives an image filename and an optional width and height size. The default size is 150 by 150 pixels.
+    if not filename: #Checks whether filename is empty or has the value None.
+        return None #Stops the function and returns None because there is no image filename to load.
 
-EXERCISE_DATA = [
-    {"name": "Barbell Bench Press", "description": "Lower the bar towards your chest, then press it upwards.", "category": "Chest", "image": ""},
+    try: #Attempts to run the image loading code while allowing the program to handle an error without crashing.
+        img = Image.open(EXERCISE_IMAGE_FOLDER / filename) #Joins the image folder path with the filename, opens that image using Pillow and stores it in the variable img.
+        img = img.resize(size) #Resizes the opened image using the width and height stored in size, then assigns the resized image back to img.
+        return ImageTk.PhotoImage(img) #Converts the Pillow image into a format Tkinter can display and returns the converted image.
+
+    except Exception as error: #Runs if an error occurs, such as the image being missing, corrupted or an unsupported file type.
+         print("Image path:", EXERCISE_IMAGE_FOLDER / filename)
+         print("Image error:", error)
+         return None #Returns None so the program can continue without displaying an image instead of crashing.
+
+STARTER_EXERCISES = [ #Stores the starting exercise information that will be copied into the database the first time the program runs.
+    {"name": "Barbell Bench Press", "description": "Lower the bar towards your chest, then press it upwards.", "category": "Chest", "image": "Barbell Bench Press.png"},
     {"name": "Incline Dumbbell Press", "description": "Press dumbbells upwards while lying on an inclined bench.", "category": "Chest", "image": ""},
     {"name": "Machine Chest Fly", "description": "Bring the handles together in front of your chest.", "category": "Chest", "image": ""},
     {"name": "Dips", "description": "Holding onto two parallel bars, lowering your body by bending your arms, and then pushing yourself back up", "category": "Chest", "image": ""},
@@ -93,18 +137,106 @@ EXERCISE_DATA = [
     {"name": "T-Bar Rows", "description": "Pull a T-bar weight towards your torso.", "category": "Back", "image": ""},
     {"name": "Deadlifts", "description": "Lift a barbell from the ground to hip level.", "category": "Back", "image": ""},
     
-    {"name": "Squats", "description": "Stand with feet shoulder-width apart and lower your body by bending your knees and hips.", "category": "Legs", "image": ""},
+    {"name": "Squats", "description": "Stand with feet shoulder width apart and lower your body by bending your knees and hips.", "category": "Legs", "image": ""},
     {"name": "Romanian Deadlifts", "description": "Lift a barbell from the ground to hip level with a slight bend in your knees.", "category": "Legs", "image": ""},
     {"name": "Calf Raises", "description": "Raise your heels off the ground while standing on your toes.", "category": "Legs", "image": ""},
     {"name": "Leg Extensions", "description": "Extend your legs straight out in front of you while seated.", "category": "Legs", "image": ""},
     {"name": "Leg Press", "description": "Push a weight away from your body while seated.", "category": "Legs", "image": ""},
-    {"name": "Leg Curls", "description": " Curl your legs under your body while seated.", "category": "Legs", "image": ""},
+    {"name": "Leg Curls", "description": "Curl your legs under your body while seated.", "category": "Legs", "image": ""},
     
     {"name": "Machine Abdominal Crunches", "description": "Perform crunches using a machine designed for abdominal exercises.", "category": "Core", "image": ""},
-    {"name": "Planks", "description": "Hold a position similar to a push-up, but rest on your forearms.", "category": "Core", "image": ""},
+    {"name": "Planks", "description": "Hold a position similar to a push up, but rest on your forearms.", "category": "Core", "image": ""},
     {"name": "Russian Twists", "description": "Sit on the floor and twist your torso from side to side.", "category": "Core", "image": ""},     
 ]
 #To get all the data for such exercises I used another gym app called 'Hevy'.
+
+
+def seed_exercise_database(): #Adds the starting exercise list to the database without creating duplicate exercises.
+    conn = connect_exercise_database() #Opens the exercise database.
+    cursor = conn.cursor() #Creates a cursor for running the insert command.
+
+    exercise_rows = [ #Changes each exercise dictionary into a tuple that can be inserted into SQLite.
+        (exercise["name"], exercise["description"], exercise["category"], exercise["image"])
+        for exercise in STARTER_EXERCISES
+    ]
+
+    cursor.executemany( #Adds every starter exercise and ignores a name that is already stored.
+        "INSERT OR IGNORE INTO exercises (name, description, category, image) VALUES (?, ?, ?, ?)",
+        exercise_rows
+    )
+
+    conn.commit() #Saves the inserted exercise records.
+    conn.close() #Closes the database connection.
+
+
+def get_all_exercises(): #Gets the Exercise Library records from the database.
+    conn = connect_exercise_database() #Opens the exercise database.
+    conn.row_factory = sqlite3.Row #Makes each returned database row behave like a dictionary.
+    cursor = conn.cursor() #Creates a cursor for the select command.
+    cursor.execute( #Selects all exercises and orders them by category and name.
+        "SELECT exercise_id, name, description, category, image "
+        "FROM exercises ORDER BY category, name"
+    )
+    exercises = [dict(row) for row in cursor.fetchall()] #Converts the database rows into dictionaries used by the GUI.
+    conn.close() #Closes the database connection.
+    return exercises #Returns all of the exercises to the Exercise Library page.
+
+
+def get_user_workout(username): #Gets the selected exercises and saved values belonging to one user.
+    conn = connect_exercise_database() #Opens the exercise database.
+    conn.row_factory = sqlite3.Row #Makes each result behave like a dictionary.
+    cursor = conn.cursor() #Creates a cursor for the select command.
+    cursor.execute( #Joins the workout table to the exercise table so the GUI receives all required information.
+        "SELECT user_workouts.workout_id, exercises.exercise_id, exercises.name, "
+        "exercises.category, user_workouts.sets, user_workouts.reps, user_workouts.weight "
+        "FROM user_workouts "
+        "JOIN exercises ON user_workouts.exercise_id = exercises.exercise_id "
+        "WHERE user_workouts.username = ? "
+        "ORDER BY user_workouts.workout_id",
+        (username,)
+    )
+    workout = [dict(row) for row in cursor.fetchall()] #Converts the selected database rows into dictionaries.
+    conn.close() #Closes the database connection.
+    return workout #Returns the current user's workout exercises.
+
+
+def add_workout_exercise(username, exercise_id): #Adds one library exercise to the logged in user's workout.
+    conn = connect_exercise_database() #Opens the exercise database.
+    cursor = conn.cursor() #Creates a cursor for the insert command.
+    cursor.execute( #Adds the exercise only if that user has not already selected it.
+        "INSERT OR IGNORE INTO user_workouts (username, exercise_id) VALUES (?, ?)",
+        (username, exercise_id)
+    )
+    exercise_was_added = cursor.rowcount == 1 #Records whether SQLite inserted a new workout row.
+    conn.commit() #Saves the change.
+    conn.close() #Closes the database connection.
+    return exercise_was_added #Returns True for a new exercise or False for a duplicate.
+
+
+def update_workout_exercise(workout_id, sets, reps, weight): #Saves a workout exercise's sets, reps and weight.
+    conn = connect_exercise_database() #Opens the exercise database.
+    cursor = conn.cursor() #Creates a cursor for the update command.
+    cursor.execute( #Updates only the selected workout row.
+        "UPDATE user_workouts SET sets = ?, reps = ?, weight = ? "
+        "WHERE workout_id = ? AND username = ?",
+        (sets, reps, weight, workout_id, current_user)
+    )
+    conn.commit() #Saves the new workout values.
+    conn.close() #Closes the database connection.
+
+
+def delete_workout_exercise(workout_id): #Removes one selected exercise from the current user's workout.
+    conn = connect_exercise_database() #Opens the exercise database.
+    cursor = conn.cursor() #Creates a cursor for the delete command.
+    cursor.execute( #Deletes only the selected row belonging to the logged in user.
+        "DELETE FROM user_workouts WHERE workout_id = ? AND username = ?",
+        (workout_id, current_user)
+    )
+    conn.commit() #Saves the deletion.
+    conn.close() #Closes the database connection.
+
+
+seed_exercise_database() #Copies the starter exercise data into SQLite when the program starts.
 
 
 
@@ -114,7 +246,7 @@ header_frame = tk.Frame(root, bg="black", height=250) #Creates a frame called he
 header_frame.pack(fill="x", padx=5, pady=5) #Places the header_frame at the top of the main window and fills the entire width of the window. The padx and pady parameters add padding around the frame to create some space between the frame and other elements in the window.
 header_frame.pack_propagate(False) #Prevents the header_frame from resizing itself to fit its contents. This is done to ensure that the frame maintains its specified height of 250 pixels, regardless of the size of the logo and title within it.
 
-image_path = Path(__file__).parent / "Khaos_Logo.png" #Finds the path to the image file "Khaos_Logo.png" in the same directory as the main.py file. This is done using the Path class from the pathlib library. Used help from the teacher and youtube videoes to help me understand how to use the Path class and implement it into my code.
+image_path = Path(__file__).parent / "Khaos Images" / "Khaos_Logo.png" #Finds the path to the image file "Khaos_Logo.png" in the same directory as the main.py file. This is done using the Path class from the pathlib library. Used help from the teacher and youtube videoes to help me understand how to use the Path class and implement it into my code.
 
 try: #Tries to open the image file "Khaos_Logo.png" and display it in the header_frame.
     img = Image.open(image_path) #Opens the image file "Khaos_Logo.png" using the Image class from the PIL library. 
@@ -181,7 +313,7 @@ def clear_content(): #Defines a function called clear_content that removes the c
     for widget in content_frame.winfo_children(): #Loops through all the elements that are currently displayed in the content_frame. 
         widget.destroy() #Deletes each element in the content_frame, effectively clearing the content area before loading a new page. 
 
-#For lines 103 to 113, I used help from a youtube video as when this wasn't in my code it kept breaking when I tried to change pages. I learnt that this function is used to clear the content area before loading a new page, preventing overlapping content and ensuring that only the relevant page is displayed at any given time.
+#For lines 304 to 312, I used help from a youtube video as when this wasn't in my code it kept breaking when I tried to change pages. I learnt that this function is used to clear the content area before loading a new page, preventing overlapping content and ensuring that only the relevant page is displayed at any given time.
 
 
 
@@ -234,7 +366,9 @@ def show_my_workout(): #Defines the function 'show_my_workout' which displays th
 
     title.pack(pady=(25, 15)) #Displays the heading with padding around it.
 
-    if not my_workout_exercises: #Checks whether the user has no saved exercises.
+    workout_exercises = get_user_workout(current_user) #Loads this user's saved exercises and workout values from the database.
+
+    if not workout_exercises: #Checks whether the user has no exercises saved in the database.
         message = tk.Label( #Creates a text for the My Workout page.
             content_frame, #Places the text inside the content area.
             text="Your Selected Workouts Will Appear Here", #Displays the set text, informing the user that their selected workouts would appear there.
@@ -257,11 +391,27 @@ def show_my_workout(): #Defines the function 'show_my_workout' which displays th
         padx=20 #Adds 20 pixels of padding to the left and right.
     )
 
-    def remove_exercise(exercise): #Defines the function remove_exercise allowing users to remove a previously selected exercise.
-        my_workout_exercises.remove(exercise) #Removes the selected exercise from the list.
+    def remove_exercise(workout_id): #Defines the function that removes a selected database workout record.
+        delete_workout_exercise(workout_id) #Deletes the selected exercise from this user's database workout.
         show_my_workout() #Reloads the page to show the updated exercise list.
 
-    for exercise in my_workout_exercises: #Loops through every saved exercise.
+    def save_workout_values(workout_id, sets_entry, reps_entry, weight_entry, status_label): #Validates and saves the values entered for one exercise.
+        try: #Attempts to turn the entry box text into numbers.
+            sets = int(sets_entry.get()) #Converts the sets value into a whole number.
+            reps = int(reps_entry.get()) #Converts the reps value into a whole number.
+            weight = float(weight_entry.get()) #Converts the weight value into a decimal number.
+
+            if sets < 0 or reps < 0 or weight < 0: #Stops negative workout values from being saved.
+                raise ValueError #Moves the program to the error message below.
+
+        except ValueError: #Runs if an entry is empty, negative or not a valid number.
+            status_label.config(text="Enter valid numbers", fg="red") #Explains the input problem to the user.
+            return #Stops the invalid values from reaching the database.
+
+        update_workout_exercise(workout_id, sets, reps, weight) #Saves the valid values in the database.
+        status_label.config(text="Saved!", fg="#42d66b") #Confirms that the update was successful.
+
+    for exercise in workout_exercises: #Loops through every exercise saved for the logged in user.
         row = tk.Frame( #Creates a separate row for the current exercise.
             list_frame, #Places the row inside the exercise list.
             bg="#202020" #Gives the row a grey background.
@@ -277,7 +427,7 @@ def show_my_workout(): #Defines the function 'show_my_workout' which displays th
             bg="#202020" #Gives it the same background colour as the row.
         )
 
-        info.pack( #Displays the exercise-information frame.
+        info.pack( #Displays the exercise information frame.
             side="left", #Places the information on the left side of the row.
             fill="x", #Makes the information fill the available width.
             expand=True, #Allows the information area to use the extra space.
@@ -303,8 +453,71 @@ def show_my_workout(): #Defines the function 'show_my_workout' which displays th
             anchor="w" #Positions the text on the left side of the label.
         ).pack(fill="x") #Displays the label across the available width.
 
+        values_frame = tk.Frame( #Creates a frame for the sets, reps and weight controls.
+            row, #Places the controls inside the exercise row.
+            bg="#202020" #Matches the row's dark grey background.
+        )
+
+        values_frame.pack( #Displays the workout value controls.
+            side="left", #Places the controls after the exercise information.
+            padx=10, #Adds horizontal spacing around the controls.
+            pady=8 #Adds vertical spacing around the controls.
+        )
+
+        tk.Label(values_frame, text="Sets", font=("Arial", 9, "bold"), bg="#202020", fg="white").grid(row=0, column=0, padx=5) #Creates the sets heading.
+        tk.Label(values_frame, text="Reps", font=("Arial", 9, "bold"), bg="#202020", fg="white").grid(row=0, column=1, padx=5) #Creates the reps heading.
+        tk.Label(values_frame, text="Weight (kg)", font=("Arial", 9, "bold"), bg="#202020", fg="white").grid(row=0, column=2, padx=5) #Creates the weight heading.
+
+        sets_entry = tk.Entry(values_frame, font=("Arial", 10), width=7, justify="center") #Creates the sets input box.
+        sets_entry.grid(row=1, column=0, padx=5, pady=(3, 0)) #Displays the sets input box.
+        sets_entry.insert(0, str(exercise["sets"])) #Displays the sets value previously saved in the database.
+
+        reps_entry = tk.Entry(values_frame, font=("Arial", 10), width=7, justify="center") #Creates the reps input box.
+        reps_entry.grid(row=1, column=1, padx=5, pady=(3, 0)) #Displays the reps input box.
+        reps_entry.insert(0, str(exercise["reps"])) #Displays the reps value previously saved in the database.
+
+        weight_entry = tk.Entry(values_frame, font=("Arial", 10), width=9, justify="center") #Creates the weight input box.
+        weight_entry.grid(row=1, column=2, padx=5, pady=(3, 0)) #Displays the weight input box.
+        weight_entry.insert(0, f'{exercise["weight"]:g}') #Displays the saved weight without an unnecessary decimal zero.
+
+        action_frame = tk.Frame( #Creates a frame for the Save and Remove buttons.
+            row, #Places the buttons inside the exercise row.
+            bg="#202020" #Matches the row's background.
+        )
+
+        action_frame.pack( #Displays the action buttons on the right side.
+            side="right", #Places the action area at the right edge of the row.
+            padx=12, #Adds spacing around the action area.
+            pady=6 #Adds vertical spacing around the action area.
+        )
+
+        status_label = tk.Label( #Creates a message that shows whether the values were saved.
+            action_frame, #Places the message above the buttons.
+            text="", #Starts with no message.
+            font=("Arial", 9), #Sets the message font.
+            bg="#202020", #Matches the row's background.
+            fg="white", #Makes the starting text white.
+            width=16 #Keeps enough room for an error message.
+        )
+
+        status_label.pack() #Displays the save status message.
+
+        tk.Button( #Creates a button that saves the sets, reps and weight.
+            action_frame, #Places the button inside the action area.
+            text="Save", #Sets the button text.
+            font=("Arial", 10, "bold"), #Makes the button text bold.
+            bg="#7a7a7a", #Gives the button a grey background.
+            fg="white", #Makes the button text white.
+            activebackground="white", #Makes the button white while clicked.
+            activeforeground="black", #Makes the text black while clicked.
+            relief="flat", #Makes the button flat.
+            bd=0, #Removes the standard border.
+            cursor="hand2", #Changes the cursor into a hand over the button.
+            command=lambda workout_id=exercise["workout_id"], sets_box=sets_entry, reps_box=reps_entry, weight_box=weight_entry, message=status_label: save_workout_values(workout_id, sets_box, reps_box, weight_box, message)
+        ).pack(side="left", padx=4, ipady=4, ipadx=6) #Displays the Save button.
+
         tk.Button( #Creates a button that removes the exercise.
-            row, #Places the button inside the exercise row.
+            action_frame, #Places the button inside the action area.
             text="Remove", #Sets the text displayed on the button.
             font=("Arial", 10, "bold"), #Makes the button text font arial, size 10 and bold.
             bg="#202020", #Gives the button a grey background.
@@ -315,17 +528,15 @@ def show_my_workout(): #Defines the function 'show_my_workout' which displays th
             bd=0, #Removes the standard border around the button.
             cursor="hand2", #Changes the mouse cursor into a hand when it is over the button.
 
-            #I learnt the below line through websites and videos as it was very confusing to implement into my code. Saves the current exercise as "ex" and removes that exercise when the button is clicked.
-            command=lambda ex=exercise: remove_exercise(ex)).pack( #Displays and positions the 'Remove' button inside the exercise row. 
-            #This line tells the button to remove the correct exercise when clicked. The lambda waits for the click, ex=exercise remembers which exercise belongs to the button, and remove_exercise(ex) removes it. The .pack() part then displays and positions the button.
-            side="right", #Positions the button on the right side of the row.
-            padx=12, #Adds 12 pixels of space outside the left and right sides of the button.
+            command=lambda workout_id=exercise["workout_id"]: remove_exercise(workout_id)).pack( #Remembers and removes the correct database workout row when clicked.
+            side="left", #Positions the button beside the Save button.
+            padx=4, #Adds space outside the button.
             ipady=4 #Adds four pixels of space inside the button to make it taller.
         )
 
 
 
-# EXERCISE LIBRARY
+# EXERCISE LIBRARY #
 
 def show_exercise_library():
     if not logged_in:
@@ -334,6 +545,7 @@ def show_exercise_library():
 
     clear_content()
     subtitle_label.config(text="Exercise Library")
+    database_exercises = get_all_exercises() #Loads the exercise cards from SQLite instead of using the original Python list.
 
     title = tk.Label(
         content_frame,
@@ -406,7 +618,15 @@ def show_exercise_library():
     def on_mousewheel(event):
         library_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
-    library_canvas.bind_all("<MouseWheel>", on_mousewheel)
+    def start_mousewheel(event): #Activates scrolling while the mouse is over the Exercise Library.
+        root.bind_all("<MouseWheel>", on_mousewheel) #Sends mouse wheel movement to the library canvas.
+
+    def stop_mousewheel(event): #Stops the library scroll command when the mouse leaves the page.
+        root.unbind_all("<MouseWheel>") #Prevents the deleted canvas from being controlled from another page.
+
+    scroll_container.bind("<Enter>", start_mousewheel) #Turns library scrolling on when the mouse enters the scroll area.
+    scroll_container.bind("<Leave>", stop_mousewheel) #Turns library scrolling off when the mouse leaves the scroll area.
+    scroll_container.bind("<Destroy>", stop_mousewheel) #Removes the global binding if the page is cleared.
 
     def open_exercise_details(exercise):
         detail_window = tk.Toplevel(root)
@@ -436,11 +656,12 @@ def show_exercise_library():
         ).pack(pady=20)
 
     def add_exercise_to_workout(exercise, add_button):
-        if exercise in my_workout_exercises:
-            add_button.config(text="Already Added")
-        else:
-            my_workout_exercises.append(exercise)
+        exercise_was_added = add_workout_exercise(current_user, exercise["exercise_id"]) #Saves the selected exercise for the logged in user.
+
+        if exercise_was_added: #Checks whether a new database record was created.
             add_button.config(text="Added!")
+        else: #Runs if the exercise was already in this user's workout.
+            add_button.config(text="Already Added")
 
         def reset_button():
             if add_button.winfo_exists():
@@ -506,7 +727,7 @@ def show_exercise_library():
             typed_text = ""
 
         matches = [
-            exercise for exercise in EXERCISE_DATA
+            exercise for exercise in database_exercises
             if typed_text in exercise["name"].lower()
             or typed_text in exercise["category"].lower()
         ]
@@ -536,146 +757,147 @@ def show_exercise_library():
 
 # LOGIN PAGE #
 
-def show_login():
-    clear_content()
-    subtitle_label.config(text="Log In / Sign Up")
+def show_login():  # Defines the function that displays the login page.
+    clear_content()  # Removes the content from the previous page.
+    subtitle_label.config(text="Log In / Sign Up")  # Changes the header subtitle.
 
-    login_frame = tk.Frame(content_frame, bg="black")
-    login_frame.pack(fill="both", expand=True)
+    login_frame = tk.Frame(content_frame, bg="black")  # Creates a frame for the login form.
+    login_frame.pack(fill="both", expand=True)  # Makes the login frame fill the content area.
 
-    no_account_label = tk.Label(
-        login_frame,
-        text="No account?",
-        font=("Arial", 11),
-        bg="black",
-        fg="white"
+    no_account_label = tk.Label(  # Creates the "No account?" message.
+        login_frame,  # Places the message inside the login frame.
+        text="No account?",  # Sets the message text.
+        font=("Arial", 11),  # Sets the message font.
+        bg="black",  # Gives the message a black background.
+        fg="white"  # Makes the message text white.
     )
 
-    no_account_label.pack(pady=(15, 0))
-    register_link = tk.Label(
-        login_frame,
-        text="Register here",
-        font=("Arial", 11, "underline"),
-        bg="black",
-        fg="white",
-        cursor="hand2"
+    no_account_label.pack(pady=(15, 0))  # Displays the message above the registration link.
+
+    register_link = tk.Label(  # Creates the clickable registration link.
+        login_frame,  # Places the link inside the login frame.
+        text="Register here",  # Sets the link text.
+        font=("Arial", 11, "underline"),  # Underlines the text so it looks like a link.
+        bg="black",  # Gives the link a black background.
+        fg="white",  # Makes the link text white.
+        cursor="hand2"  # Changes the mouse pointer when it moves over the link.
     )
 
-    register_link.pack(pady=(0, 10))
-    register_link.bind("<Button-1>", lambda event: show_register())
+    register_link.pack(pady=(0, 10))  # Displays the registration link.
+    register_link.bind("<Button-1>", lambda event: show_register())  # Opens the registration page when clicked.
 
-    username_label = tk.Label(
-        login_frame,
-        text="Username:",
-        font=("Arial", 12),
-        bg="black",
-        fg="white"
+    username_label = tk.Label(  # Creates the username label.
+        login_frame,  # Places the label inside the login frame.
+        text="Username:",  # Sets the label text.
+        font=("Arial", 12),  # Sets the label font.
+        bg="black",  # Gives the label a black background.
+        fg="white"  # Makes the label text white.
     )
 
-    username_label.pack(pady=(20, 5))
+    username_label.pack(pady=(20, 5))  # Displays the username label.
 
-    global username_entry
+    global username_entry  # Allows the login function to access the username entry.
 
-    username_entry = tk.Entry(
-        login_frame,
-        font=("Arial", 12),
-        width=25
+    username_entry = tk.Entry(  # Creates the username input box.
+        login_frame,  # Places the input box inside the login frame.
+        font=("Arial", 12),  # Sets the text font.
+        width=25  # Sets the width of the input box.
     )
 
-    username_entry.pack(pady=5)
+    username_entry.pack(pady=5)  # Displays the username input box.
 
-    password_label = tk.Label(
-        login_frame,
-        text="Password:",
-        font=("Arial", 12),
-        bg="black",
-        fg="white"
+    password_label = tk.Label(  # Creates the password label.
+        login_frame,  # Places the label inside the login frame.
+        text="Password:",  # Sets the label text.
+        font=("Arial", 12),  # Sets the label font.
+        bg="black",  # Gives the label a black background.
+        fg="white"  # Makes the label text white.
     )
 
-    password_label.pack(pady=(10, 5))
+    password_label.pack(pady=(10, 5))  # Displays the password label.
 
-    global password_entry
+    global password_entry  # Allows the login function to access the password entry.
 
-    password_entry = tk.Entry(
-        login_frame,
-        font=("Arial", 12),
-        width=25,
-        show="*"
+    password_entry = tk.Entry(  # Creates the password input box.
+        login_frame,  # Places the input box inside the login frame.
+        font=("Arial", 12),  # Sets the text font.
+        width=25,  # Sets the width of the input box.
+        show="*"  # Replaces the typed password with asterisks.
     )
 
-    password_entry.pack(pady=5)
+    password_entry.pack(pady=5)  # Displays the password input box.
 
-    global message_label
+    global message_label  # Allows the login function to update the message label.
 
-    message_label = tk.Label(
-        login_frame,
-        text="",
-        font=("Arial", 11),
-        bg="black",
-        fg="white"
+    message_label = tk.Label(  # Creates a label for login messages.
+        login_frame,  # Places the message inside the login frame.
+        text="",  # Starts with no message.
+        font=("Arial", 11),  # Sets the message font.
+        bg="black",  # Gives the message a black background.
+        fg="white"  # Makes the starting text white.
     )
 
-    message_label.pack(pady=10)
+    message_label.pack(pady=10)  # Displays the message area.
 
-    submit_button = tk.Button(
-        login_frame,
-        text="Log In",
-        font=("Arial", 11, "bold"),
-        bg="#202020",
-        fg="white",
-        activebackground="white",
-        activeforeground="black",
-        relief="flat",
-        bd=0,
-        highlightthickness=2,
-        highlightbackground="white",
-        highlightcolor="white",
-        cursor="hand2",
-        command=login
+    submit_button = tk.Button(  # Creates the login button.
+        login_frame,  # Places the button inside the login frame.
+        text="Log In",  # Sets the button text.
+        font=("Arial", 11, "bold"),  # Makes the button text bold.
+        bg="#202020",  # Gives the button a dark grey background.
+        fg="white",  # Makes the button text white.
+        activebackground="white",  # Makes the button white while clicked.
+        activeforeground="black",  # Makes the text black while clicked.
+        relief="flat",  # Removes the raised button border.
+        bd=0,  # Removes the standard border.
+        highlightthickness=2,  # Sets the thickness of the highlight border.
+        highlightbackground="white",  # Makes the highlight border white.
+        highlightcolor="white",  # Keeps the highlight border white when selected.
+        cursor="hand2",  # Changes the mouse pointer over the button.
+        command=login  # Calls the login function when clicked.
     )
 
-    submit_button.pack(pady=10)
+    submit_button.pack(pady=10)  # Displays the login button.
 
 
 
 # LOGIN FUNCTION #
 
-def login():
-    global logged_in
-    global current_user
+def login():  # Defines the function that checks the user's login details.
+    global logged_in  # Allows this function to change the login status.
+    global current_user  # Allows this function to store the current username.
 
-    username = username_entry.get().strip()
-    password = password_entry.get()
+    username = username_entry.get().strip()  # Gets the username and removes unwanted spaces.
+    password = password_entry.get()  # Gets the password entered by the user.
 
-    if not username or not password:
-        message_label.config(
-            text="Please enter a username and password.",
-            fg="red"
+    if not username or not password:  # Checks whether either input box is empty.
+        message_label.config(  # Updates the login message.
+            text="Please enter a username and password.",  # Explains that both fields are required.
+            fg="red"  # Makes the error message red.
         )
 
-        return
+        return  # Stops the login attempt.
 
-    conn = sqlite3.connect("khaos.db")
-    cursor = conn.cursor()
+    conn = connect_login_database()  # Opens khaoslogins.db to check the username and password.
+    cursor = conn.cursor()  # Creates a cursor for running SQL commands.
 
-    cursor.execute(
-        "SELECT * FROM users WHERE username=? AND password=?",
-        (username, password)
+    cursor.execute(  # Searches the database for matching login details.
+        "SELECT * FROM users WHERE username=? AND password=?",  # Uses placeholders to search safely.
+        (username, password)  # Supplies the username and password to the placeholders.
     )
 
-    result = cursor.fetchone()
-    conn.close()
+    result = cursor.fetchone()  # Gets the first matching user from the database.
+    conn.close()  # Closes the database connection.
 
-    if result:
-        logged_in = True
-        current_user = username_entry
-        show_logged_in_navigation()
-        show_main_menu()
+    if result:  # Checks whether a matching account was found.
+        logged_in = True  # Changes the login status to logged in.
+        current_user = username  # Stores the logged in user's username.
+        show_logged_in_navigation()  # Displays the navigation buttons for logged in users.
+        show_main_menu()  # Returns the user to the main menu.
 
-    else:
-        message_label.config(
-            text="Invalid username or password.",
-            fg="red"
+    else:  # Runs when the username and password do not match an account.
+        message_label.config(  # Updates the login message.
+            text="Invalid username or password.",  # Explains that the login details were incorrect.
+            fg="red"  # Makes the error message red.
         )
 
 def register():
@@ -689,7 +911,7 @@ def register():
         )
         return
 
-    conn = sqlite3.connect("khaos.db")
+    conn = connect_login_database()
     cursor = conn.cursor()
 
     try:
@@ -887,7 +1109,7 @@ def show_logged_out_navigation():
     )
 
 
- 
+
 # LOGGED IN NAVIGATION #
 
 def show_logged_in_navigation():
